@@ -1406,7 +1406,12 @@ class ItemPlayerAudio extends StatefulWidget {
   final String folderAssets;
   final AudioPlayer audioPlayerGlobal;
 
-  const ItemPlayerAudio({super.key, required this.numarParte, required this.folderAssets, required this.audioPlayerGlobal});
+  const ItemPlayerAudio({
+    super.key,
+    required this.numarParte,
+    required this.folderAssets,
+    required this.audioPlayerGlobal
+  });
 
   @override
   State<ItemPlayerAudio> createState() => _ItemPlayerAudioState();
@@ -1434,60 +1439,47 @@ class _ItemPlayerAudioState extends State<ItemPlayerAudio> {
     });
   }
 
-  Future<String> _obtineSursaAudioCale() async {
-    setState(() => _seIncarcaSursa = true);
-
-    final candidatiCaleAsset = [
-      'carti/${widget.folderAssets}/audio_${widget.numarParte}.mp3',
-      'carti/${widget.folderAssets}/audio_${widget.numarParte}.MP3',
-      'carti/${widget.folderAssets}/audio_part_${widget.numarParte}.mp4',
-      'carti/${widget.folderAssets}/audio_${widget.numarParte}.mp4',
-      'carti/${widget.folderAssets}/audio_part_${widget.numarParte}.mp3',
-    ];
-
-    String? assetPathGasit;
-    for (final cale in candidatiCaleAsset) {
-      try {
-        await rootBundle.load('assets/$cale');
-        assetPathGasit = cale;
-        break;
-      } catch (_) {
-        continue;
-      }
-    }
-
-    setState(() => _seIncarcaSursa = false);
-
-    if (assetPathGasit == null) {
-      throw Exception('Nu am găsit fișierul audio pentru partea ${widget.numarParte} în ${widget.folderAssets}.');
-    }
-
-    return assetPathGasit;
+  String _obtineSursaAudioURL() {
+    final String numeFisier = "audio_${widget.numarParte}.mp3";
+    return "https://github.com/cristinanae-dev/biblioteca_noastra/blob/main/assets/carti/${widget.folderAssets}/$numeFisier?raw=true";
   }
 
   @override
   Widget build(BuildContext context) {
-    double maxSliderValue = _durata.inMilliseconds > 0 ? _durata.inMilliseconds.toDouble() : const Duration(minutes: 30).inMilliseconds.toDouble();
+    double maxSliderValue = _durata.inMilliseconds > 0
+        ? _durata.inMilliseconds.toDouble()
+        : const Duration(minutes: 30).inMilliseconds.toDouble();
 
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
       padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(color: kFundalCard2, borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.white12)),
+      decoration: BoxDecoration(
+          color: kFundalCard2,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.white12)
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Partea ${widget.numarParte}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13, fontFamily: 'Roboto')),
-              if (_seIncarcaSursa) const SizedBox(width: 12, height: 12, child: CircularProgressIndicator(strokeWidth: 2, color: kAccentCyan)),
+              Text(
+                  'Partea ${widget.numarParte}',
+                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13, fontFamily: 'Roboto')
+              ),
+              if (_seIncarcaSursa)
+                const SizedBox(width: 12, height: 12, child: CircularProgressIndicator(strokeWidth: 2, color: kAccentCyan)),
             ],
           ),
           const SizedBox(height: 8),
           Row(
             children: [
               Container(
-                decoration: const BoxDecoration(gradient: LinearGradient(colors: [kAccentCyan, kAccentViolet]), shape: BoxShape.circle),
+                decoration: const BoxDecoration(
+                    gradient: LinearGradient(colors: [kAccentCyan, kAccentViolet]),
+                    shape: BoxShape.circle
+                ),
                 child: IconButton(
                   icon: Icon(_estePornit ? Icons.pause : Icons.play_arrow, color: kFundal, size: 22),
                   onPressed: () async {
@@ -1496,15 +1488,20 @@ class _ItemPlayerAudioState extends State<ItemPlayerAudio> {
                       await widget.audioPlayerGlobal.pause();
                       setState(() => _estePornit = false);
                     } else {
+                      setState(() => _seIncarcaSursa = true);
                       await widget.audioPlayerGlobal.stop();
                       try {
-                        String caleaAsset = await _obtineSursaAudioCale();
-                        await widget.audioPlayerGlobal.setSource(AssetSource(caleaAsset));
+                        String urlAudio = _obtineSursaAudioURL();
+                        await widget.audioPlayerGlobal.setSource(UrlSource(urlAudio));
                         await widget.audioPlayerGlobal.resume();
-                        setState(() => _estePornit = true);
+                        setState(() {
+                          _estePornit = true;
+                          _seIncarcaSursa = false;
+                        });
                       } catch (e) {
+                        setState(() => _seIncarcaSursa = false);
                         if (mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Eroare Audio: $e')));
                         }
                       }
                     }
@@ -1512,11 +1509,18 @@ class _ItemPlayerAudioState extends State<ItemPlayerAudio> {
                 ),
               ),
               const SizedBox(width: 8),
-              Text('${_formatTimp(_pozitie)} / ${_formatTimp(_durata)}', style: const TextStyle(color: kTextSecundar, fontSize: 11, fontFamily: 'monospace')),
+              Text(
+                  '${_formatTimp(_pozitie)} / ${_formatTimp(_durata)}',
+                  style: const TextStyle(color: kTextSecundar, fontSize: 11, fontFamily: 'monospace')
+              ),
               const SizedBox(width: 8),
               Expanded(
                 child: SliderTheme(
-                  data: SliderTheme.of(context).copyWith(thumbColor: kAccentCyan, activeTrackColor: kAccentCyan, inactiveTrackColor: Colors.white12),
+                  data: SliderTheme.of(context).copyWith(
+                      thumbColor: kAccentCyan,
+                      activeTrackColor: kAccentCyan,
+                      inactiveTrackColor: Colors.white12
+                  ),
                   child: Slider(
                     min: 0.0,
                     max: maxSliderValue,
@@ -1526,8 +1530,8 @@ class _ItemPlayerAudioState extends State<ItemPlayerAudio> {
                     onChangeEnd: (v) async {
                       final nP = Duration(milliseconds: v.toInt());
                       try {
-                        String caleaAsset = await _obtineSursaAudioCale();
-                        await widget.audioPlayerGlobal.setSource(AssetSource(caleaAsset));
+                        String urlAudio = _obtineSursaAudioURL();
+                        await widget.audioPlayerGlobal.setSource(UrlSource(urlAudio));
                         await widget.audioPlayerGlobal.seek(nP);
                         if (!_estePornit) {
                           await widget.audioPlayerGlobal.setVolume(0.0);
@@ -1548,9 +1552,12 @@ class _ItemPlayerAudioState extends State<ItemPlayerAudio> {
       ),
     );
   }
+}
 
-  String _formatTimp(Duration d) {
-    String douaCifre(int n) => n.toString().padLeft(2, "0");
-    return "${douaCifre(d.inMinutes.remainder(60))}:${douaCifre(d.inSeconds.remainder(60))}";
-  }
+// Dacă mai jos aveai funcția _formatTimp, asigură-te că o păstrezi:
+String _formatTimp(Duration duration) {
+  String douaCifre(int n) => n.toString().padLeft(2, "0");
+  String douaCifreMinute = douaCifre(duration.inMinutes.remainder(60));
+  String douaCifreSecunde = douaCifre(duration.inSeconds.remainder(60));
+  return "$douaCifreMinute:$douaCifreSecunde";
 }
