@@ -1414,35 +1414,37 @@ class ItemPlayerAudio extends StatefulWidget {
 
 class _ItemPlayerAudioState extends State<ItemPlayerAudio> {
   bool _estePornit = false;
+  bool _seDeruleazaAcum = false;
   bool _seIncarcaSursa = false;
+  Duration _pozitie = Duration.zero;
+  Duration _durata = Duration.zero;
 
   @override
   void initState() {
     super.initState();
-    // Ascultăm starea player-ului pentru a actualiza butonul de UI corect
-    widget.audioPlayerGlobal.onPlayerStateChanged.listen((stare) {
-      if (!mounted) return;
-      setState(() {
-        _estePornit = stare == PlayerState.playing;
-      });
+    _ascultaSchimbariPlayer();
+  }
+
+  void _ascultaSchimbariPlayer() {
+    widget.audioPlayerGlobal.onDurationChanged.listen((d) {
+      if (mounted) setState(() => _durata = d);
+    });
+    widget.audioPlayerGlobal.onPositionChanged.listen((p) {
+      if (mounted && !_seDeruleazaAcum) setState(() => _pozitie = p);
     });
   }
 
   Future<String> _obtineSursaAudioCale() async {
     setState(() => _seIncarcaSursa = true);
 
-    // Listă curată fără prefixul "assets/" pentru a evita dublarea pe Web
     final candidatiCaleAsset = [
       'carti/${widget.folderAssets}/audio_${widget.numarParte}.mp3',
+      'carti/${widget.folderAssets}/audio_${widget.numarParte}.MP3',
+      'carti/${widget.folderAssets}/audio_part_${widget.numarParte}.mp4',
       'carti/${widget.folderAssets}/audio_${widget.numarParte}.mp4',
+      'carti/${widget.folderAssets}/audio_part_${widget.numarParte}.mp3',
     ];
 
-    if (kIsWeb) {
-      setState(() => _seIncarcaSursa = false);
-      return candidatiCaleAsset.first;
-    }
-
-    // Logica pentru mobil (Android/iOS)
     String? assetPathGasit;
     for (final cale in candidatiCaleAsset) {
       try {
@@ -1457,7 +1459,7 @@ class _ItemPlayerAudioState extends State<ItemPlayerAudio> {
     setState(() => _seIncarcaSursa = false);
 
     if (assetPathGasit == null) {
-      throw Exception('Nu am găsit fișierul audio pentru partea ${widget.numarParte}.');
+      throw Exception('Nu am găsit fișierul audio pentru partea ${widget.numarParte} în ${widget.folderAssets}.');
     }
 
     return assetPathGasit;
@@ -1465,47 +1467,90 @@ class _ItemPlayerAudioState extends State<ItemPlayerAudio> {
 
   @override
   Widget build(BuildContext context) {
-    return ListTile(
-      title: Text('Partea ${widget.numarParte}'),
-      trailing: _seIncarcaSursa
-          ? const CircularProgressIndicator()
-          : IconButton(
-        icon: Icon(_estePornit ? Icons.pause : Icons.play_arrow),
-        onPressed: () async {
-          if (_seIncarcaSursa) return;
+    double maxSliderValue = _durata.inMilliseconds > 0 ? _durata.inMilliseconds.toDouble() : const Duration(minutes: 30).inMilliseconds.toDouble();
 
-          if (_estePornit) {
-            await widget.audioPlayerGlobal.pause();
-            setState(() => _estePornit = false);
-          } else {
-            await widget.audioPlayerGlobal.stop();
-            try {
-              String caleaAsset = await _obtineSursaAudioCale();
-
-              if (kIsWeb) {
-                // Rezolvă problema de pe GitHub Pages prin UrlSource direct în folderul generat
-                await widget.audioPlayerGlobal.setSource(UrlSource('assets/$caleaAsset'));
-              } else {
-                await widget.audioPlayerGlobal.setSource(AssetSource(caleaAsset));
-              }
-
-              await widget.audioPlayerGlobal.resume();
-              setState(() => _estePornit = true);
-            } catch (e) {
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Eroare la redare: $e')),
-                );
-              }
-            }
-          }
-        },
+    return Container(
+      margin: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(color: kFundalCard2, borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.white12)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('Partea ${widget.numarParte}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13, fontFamily: 'Roboto')),
+              if (_seIncarcaSursa) const SizedBox(width: 12, height: 12, child: CircularProgressIndicator(strokeWidth: 2, color: kAccentCyan)),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Container(
+                decoration: const BoxDecoration(gradient: LinearGradient(colors: [kAccentCyan, kAccentViolet]), shape: BoxShape.circle),
+                child: IconButton(
+                  icon: Icon(_estePornit ? Icons.pause : Icons.play_arrow, color: kFundal, size: 22),
+                  onPressed: () async {
+                    if (_seIncarcaSursa) return;
+                    if (_estePornit) {
+                      await widget.audioPlayerGlobal.pause();
+                      setState(() => _estePornit = false);
+                    } else {
+                      await widget.audioPlayerGlobal.stop();
+                      try {
+                        String caleaAsset = await _obtineSursaAudioCale();
+                        await widget.audioPlayerGlobal.setSource(AssetSource(caleaAsset));
+                        await widget.audioPlayerGlobal.resume();
+                        setState(() => _estePornit = true);
+                      } catch (e) {
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+                        }
+                      }
+                    }
+                  },
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text('${_formatTimp(_pozitie)} / ${_formatTimp(_durata)}', style: const TextStyle(color: kTextSecundar, fontSize: 11, fontFamily: 'monospace')),
+              const SizedBox(width: 8),
+              Expanded(
+                child: SliderTheme(
+                  data: SliderTheme.of(context).copyWith(thumbColor: kAccentCyan, activeTrackColor: kAccentCyan, inactiveTrackColor: Colors.white12),
+                  child: Slider(
+                    min: 0.0,
+                    max: maxSliderValue,
+                    value: _pozitie.inMilliseconds.toDouble().clamp(0.0, maxSliderValue),
+                    onChangeStart: (v) => setState(() => _seDeruleazaAcum = true),
+                    onChanged: (v) => setState(() => _pozitie = Duration(milliseconds: v.toInt())),
+                    onChangeEnd: (v) async {
+                      final nP = Duration(milliseconds: v.toInt());
+                      try {
+                        String caleaAsset = await _obtineSursaAudioCale();
+                        await widget.audioPlayerGlobal.setSource(AssetSource(caleaAsset));
+                        await widget.audioPlayerGlobal.seek(nP);
+                        if (!_estePornit) {
+                          await widget.audioPlayerGlobal.setVolume(0.0);
+                          await widget.audioPlayerGlobal.resume();
+                          await Future.delayed(const Duration(milliseconds: 30));
+                          await widget.audioPlayerGlobal.pause();
+                          await widget.audioPlayerGlobal.setVolume(1.0);
+                        }
+                      } catch (_) {}
+                      setState(() => _seDeruleazaAcum = false);
+                    },
+                  ),
+                ),
+              ),
+            ],
+          )
+        ],
       ),
     );
   }
-}
 
   String _formatTimp(Duration d) {
     String douaCifre(int n) => n.toString().padLeft(2, "0");
     return "${douaCifre(d.inMinutes.remainder(60))}:${douaCifre(d.inSeconds.remainder(60))}";
   }
+}
