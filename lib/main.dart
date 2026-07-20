@@ -6,6 +6,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart' show kIsWeb;
 
+import 'package:flutter/foundation.dart';
 // ============================================================
 // ADRESA DE EMAIL PENTRU SCRIITORI CARE VOR SĂ-ȘI PUBLICE CARTEA
 // ============================================================
@@ -1499,7 +1500,11 @@ class _ItemPlayerAudioState extends State<ItemPlayerAudio> {
                       await widget.audioPlayerGlobal.stop();
                       try {
                         String caleaAsset = await _obtineSursaAudioCale();
-                        await widget.audioPlayerGlobal.setSource(AssetSource(caleaAsset));
+                        if (kIsWeb) {
+                          await widget.audioPlayerGlobal.setSource(UrlSource('assets/assets/$caleaAsset'));
+                        } else {
+                          await widget.audioPlayerGlobal.setSource(AssetSource(caleaAsset));
+                        }
                         await widget.audioPlayerGlobal.resume();
                         setState(() => _estePornit = true);
                       } catch (e) {
@@ -1527,7 +1532,11 @@ class _ItemPlayerAudioState extends State<ItemPlayerAudio> {
                       final nP = Duration(milliseconds: v.toInt());
                       try {
                         String caleaAsset = await _obtineSursaAudioCale();
-                        await widget.audioPlayerGlobal.setSource(AssetSource(caleaAsset));
+                        if (kIsWeb) {
+                          await widget.audioPlayerGlobal.setSource(UrlSource('assets/assets/$caleaAsset'));
+                        } else {
+                          await widget.audioPlayerGlobal.setSource(AssetSource(caleaAsset));
+                        }
                         await widget.audioPlayerGlobal.seek(nP);
                         if (!_estePornit) {
                           await widget.audioPlayerGlobal.setVolume(0.0);
