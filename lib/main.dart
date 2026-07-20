@@ -1504,7 +1504,7 @@ class _ItemPlayerAudioState extends State<ItemPlayerAudio> {
                         // trebuie construit manual URL-ul. Pe nativ (telefon/desktop),
                         // AssetSource merge direct, fără nimic special.
                         if (kIsWeb) {
-                          await widget.audioPlayerGlobal.setSource(UrlSource('assets/assets/$caleaAsset'));
+                          await widget.audioPlayerGlobal.setSource(UrlSource('assets/$caleaAsset'));
                         } else {
                           await widget.audioPlayerGlobal.setSource(AssetSource(caleaAsset));
                         }
@@ -1536,7 +1536,7 @@ class _ItemPlayerAudioState extends State<ItemPlayerAudio> {
                       try {
                         String caleaAsset = await _obtineSursaAudioCale();
                         if (kIsWeb) {
-                          await widget.audioPlayerGlobal.setSource(UrlSource('assets/assets/$caleaAsset'));
+                          await widget.audioPlayerGlobal.setSource(UrlSource('assets/$caleaAsset'));
                         } else {
                           await widget.audioPlayerGlobal.setSource(AssetSource(caleaAsset));
                         }
